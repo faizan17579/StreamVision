@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@tensorflow-models/face-detection": "^1.0.3",
+    "@tensorflow/tfjs": "^4.22.0"
+  }
+}
