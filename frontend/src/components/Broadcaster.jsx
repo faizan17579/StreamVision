@@ -17,6 +17,10 @@ export default function Broadcaster({ roomId, onStop }) {
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [videoQuality, setVideoQuality] = useState('high'); // 'low' | 'medium' | 'high' | 'ultra'
   const [connectionQuality, setConnectionQuality] = useState('good');
+  const [attendanceEnabled, setAttendanceEnabled] = useState(false);
+  const [viewerDetectionStatus, setViewerDetectionStatus] = useState(false);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const overlayCanvasRef = useRef(null);
 
   // Video quality configurations
   const getVideoConstraints = (quality) => {
@@ -110,6 +114,16 @@ export default function Broadcaster({ roomId, onStop }) {
       }
     });
 
+    // Viewer controls attendance; reflect their toggle state here
+    socket.on('attendance-mode', ({ enabled }) => {
+      setAttendanceEnabled(!!enabled);
+    });
+
+    // Attendance status from viewer
+    socket.on('attendance-status', ({ detected }) => {
+      setViewerDetectionStatus(!!detected);
+    });
+
     return () => {
       for (const [, pc] of peersRef.current) pc.close();
       peersRef.current.clear();
@@ -140,6 +154,8 @@ export default function Broadcaster({ roomId, onStop }) {
         }
         
         localStreamRef.current = stream;
+        // Apply current mic state to audio tracks
+        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = isMicOn; });
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
           try { await localVideoRef.current.play(); } catch {}
@@ -168,7 +184,70 @@ export default function Broadcaster({ roomId, onStop }) {
         localStreamRef.current.getTracks().forEach(t => t.stop());
       }
     };
-  }, [camera, videoQuality]);
+  }, [camera, videoQuality, isMicOn]);
+
+  // Draw attendance overlay oval on broadcaster preview (UI only)
+  useEffect(() => {
+    const canvas = overlayCanvasRef.current;
+    const videoEl = localVideoRef.current;
+    if (!canvas || !videoEl) return;
+
+    const ctx = canvas.getContext('2d');
+
+    const computeGuide = (w, h) => {
+      const aspect = h / Math.max(w, 1);
+      if (aspect > 1.3) {
+        // Tall/portrait screens (mobile)
+        return { rx: w * 0.24, ry: h * 0.26 };
+      } else if (aspect < 0.9) {
+        // Wide/landscape screens
+        return { rx: w * 0.22, ry: h * 0.31 };
+      }
+      // Default (laptop/tablet)
+      return { rx: w * 0.22, ry: h * 0.33 };
+    };
+
+    const draw = () => {
+      const { clientWidth: w, clientHeight: h } = videoEl;
+      if (w === 0 || h === 0) return;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!attendanceEnabled) return;
+
+      const { rx: guideRx, ry: guideRy } = computeGuide(w, h);
+      const guideCx = w / 2;
+      const guideCy = h / 2 - h * 0.05;
+
+      ctx.strokeStyle = viewerDetectionStatus ? '#00ff00' : '#ff6b6b';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.ellipse(guideCx, guideCy, guideRx, guideRy, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = viewerDetectionStatus ? 'rgba(0, 255, 0, 0.08)' : 'rgba(255, 107, 107, 0.08)';
+      ctx.beginPath();
+      ctx.ellipse(guideCx, guideCy, guideRx, guideRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const handleResize = () => {
+      draw();
+    };
+
+    const interval = setInterval(draw, 250);
+    window.addEventListener('resize', handleResize);
+    // initial draw
+    setTimeout(draw, 50);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', handleResize);
+      ctx && ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }, [attendanceEnabled, viewerDetectionStatus, isReady]);
 
   // Monitor connection quality
   const monitorConnectionQuality = (pc) => {
@@ -264,6 +343,10 @@ export default function Broadcaster({ roomId, onStop }) {
           <span className="status">
             {isSwitchingCamera ? 'Switching Camera...' : (isReady ? 'Connected' : 'Connecting...')}
           </span>
+          <div className={`connection-indicator ${viewerDetectionStatus ? 'good' : 'fair'}`} title={viewerDetectionStatus ? 'Face detected' : 'No face detected'}>
+            <span className="connection-dot"></span>
+            <span className="connection-text">{viewerDetectionStatus ? 'Face detected' : 'No face'}</span>
+          </div>
           <button className="btn btn-secondary" onClick={onStop}>Stop</button>
         </div>
       </div>
@@ -306,9 +389,32 @@ export default function Broadcaster({ roomId, onStop }) {
             </span>
           </div>
         </div>
+        <div className="field">
+          <label>Microphone</label>
+          <button
+            className={`btn ${isMicOn ? 'btn-success' : 'btn-primary'}`}
+            onClick={() => {
+              const next = !isMicOn;
+              setIsMicOn(next);
+              if (localStreamRef.current) {
+                localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = next; });
+              }
+            }}
+            disabled={!isReady}
+          >
+            {isMicOn ? 'Mic On' : 'Mic Off'}
+          </button>
+        </div>
+        <div className="field">
+          <label>Attendance</label>
+          <div className={`badge ${attendanceEnabled ? 'badge-success' : 'badge-secondary'}`}>
+            {attendanceEnabled ? 'Attendance On' : 'Attendance Off'}
+          </div>
+        </div>
       </div>
-      <div className="video-shell">
+      <div className="video-shell" style={{ position: 'relative' }}>
         <video ref={localVideoRef} className="video" autoPlay muted playsInline />
+        <canvas ref={overlayCanvasRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
       </div>
     </div>
   );

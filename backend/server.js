@@ -86,6 +86,33 @@ io.on('connection', (socket) => {
 		}
 	});
 
+	// Attendance mode is now controlled by the viewer (source of truth)
+	socket.on('attendance-mode', ({ roomId, enabled }) => {
+		if (!roomId) return;
+		const room = rooms.get(roomId);
+		if (!room) return;
+		// Only allow a viewer to declare their own attendance mode
+		if (role === 'viewer' && room.broadcasterSocketId) {
+			io.to(room.broadcasterSocketId).emit('attendance-mode', {
+				viewerId: socket.id,
+				enabled: !!enabled,
+			});
+		}
+	});
+
+	// Attendance status from viewer back to broadcaster
+	socket.on('attendance-status', ({ roomId, detected }) => {
+		if (!roomId) return;
+		const room = rooms.get(roomId);
+		if (!room) return;
+		if (role === 'viewer' && room.broadcasterSocketId) {
+			io.to(room.broadcasterSocketId).emit('attendance-status', {
+				viewerId: socket.id,
+				detected: !!detected,
+			});
+		}
+	});
+
 	// Signaling relay: directly route to target socket
 	socket.on('offer', (payload) => {
 		// payload: { roomId, to, from, sdp }
