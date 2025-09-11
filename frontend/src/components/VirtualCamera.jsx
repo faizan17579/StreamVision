@@ -103,48 +103,7 @@ export default function VirtualCamera({ roomId }) {
         setFaceCount(faces.length);
         setFaceStatus(faces.length > 0 ? "Person detected" : "No person detected");
 
-        // Draw exact face shapes around detected faces
-        faces.forEach(face => {
-          const { xMin, yMin, width, height } = face.box;
-          const centerX = xMin + width / 2;
-          const centerY = yMin + height / 2;
-          const aspectRatio = width / height;
-          
-          ctx.strokeStyle = "lime";
-          ctx.lineWidth = 3;
-          
-          // Determine face shape based on aspect ratio
-          if (aspectRatio > 0.9 && aspectRatio < 1.1) {
-            // Square face
-            ctx.beginPath();
-            ctx.rect(xMin - 5, yMin - 5, width + 10, height + 10);
-            ctx.stroke();
-          } else if (aspectRatio < 0.8) {
-            // Long/Rectangle face
-            ctx.beginPath();
-            ctx.rect(xMin - 5, yMin - 5, width + 10, height + 10);
-            ctx.stroke();
-          } else if (aspectRatio > 1.2) {
-            // Round face
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, Math.max(width, height) / 2 + 5, 0, Math.PI * 2);
-            ctx.stroke();
-          } else if (aspectRatio > 0.8 && aspectRatio < 1.2) {
-            // Oval face
-            ctx.beginPath();
-            ctx.ellipse(centerX, centerY, width / 2 + 5, height / 2 + 5, 0, 0, Math.PI * 2);
-            ctx.stroke();
-          } else {
-            // Diamond face
-            ctx.beginPath();
-            ctx.moveTo(centerX, yMin - 5); // Top
-            ctx.lineTo(xMin + width + 5, centerY); // Right
-            ctx.lineTo(centerX, yMin + height + 5); // Bottom
-            ctx.lineTo(xMin - 5, centerY); // Left
-            ctx.closePath();
-            ctx.stroke();
-          }
-        });
+        // Skip drawing any shapes around faces per request
 
         // Display the processed frame
         if (processedVideoRef.current) {
@@ -433,9 +392,8 @@ export default function VirtualCamera({ roomId }) {
           zIndex: 1000,
           transform: 'scaleX(-1)' // Flip horizontally for virtual camera
         }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>OBS Virtual Camera</div>
-          <div>This page is optimized for OBS capture.</div>
-          <div>Use "Window Capture" or "Browser Source" in OBS.</div>
+         
+          
         </div>
       )}
       </div>
