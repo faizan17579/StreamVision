@@ -301,15 +301,15 @@ export default function Viewer({ roomId, onLeave }) {
             let guideRx, guideRy;
             if (aspect > 1.3) {
               // Tall/portrait screens (mobile)
-              guideRx = canvas.width * 0.24;
-              guideRy = canvas.height * 0.26;
+              guideRx = canvas.width * 0.30;
+              guideRy = canvas.height * 0.27;
             } else if (aspect < 0.9) {
               // Wide/landscape screens
-              guideRx = canvas.width * 0.22;
-              guideRy = canvas.height * 0.31;
+              guideRx = canvas.width * 0.32;
+              guideRy = canvas.height * 0.30;
             } else {
               // Default laptop/tablet
-              guideRx = canvas.width * 0.22;
+              guideRx = canvas.width * 0.30;
               guideRy = canvas.height * 0.33;
             }
             const guideCx = canvas.width / 2;
@@ -361,13 +361,13 @@ export default function Viewer({ roomId, onLeave }) {
             const aspect = canvas.height / Math.max(canvas.width, 1);
             let guideRx, guideRy;
             if (aspect > 1.3) {
-              guideRx = canvas.width * 0.24;
-              guideRy = canvas.height * 0.26;
+              guideRx = canvas.width * 0.30;
+              guideRy = canvas.height * 0.27;
             } else if (aspect < 0.9) {
-              guideRx = canvas.width * 0.22;
-              guideRy = canvas.height * 0.31;
+              guideRx = canvas.width * 0.32;
+              guideRy = canvas.height * 0.30;
             } else {
-              guideRx = canvas.width * 0.22;
+              guideRx = canvas.width * 0.30;
               guideRy = canvas.height * 0.33;
             }
             const guideCx = canvas.width / 2;
@@ -429,16 +429,18 @@ export default function Viewer({ roomId, onLeave }) {
             </span>
           </div>
           {FaceDetectionCheckbox}
-          <button 
-            className={`btn ${isSpeakerOn ? 'btn-success' : 'btn-primary'}`} 
-            onClick={() => {
-              const next = !isSpeakerOn;
-              setIsSpeakerOn(next);
-              if (remoteAudioRef.current) remoteAudioRef.current.muted = !next;
-            }}
-          >
-            {isSpeakerOn ? 'Speaker On' : 'Speaker Off'}
-          </button>
+          <label className="checkbox" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={isSpeakerOn}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setIsSpeakerOn(next);
+                if (remoteAudioRef.current) remoteAudioRef.current.muted = !next;
+              }}
+            />
+            <span>Speaker {isSpeakerOn ? 'On' : 'Off'}</span>
+          </label>
           
           {/* Attendance Controls */}
           <button 
@@ -559,16 +561,18 @@ export default function Viewer({ roomId, onLeave }) {
             <div className="controls">
               <span className="status">{status}</span>
               {FaceDetectionCheckbox}
-              <button 
-                className={`btn ${isSpeakerOn ? 'btn-success' : 'btn-primary'}`} 
-                onClick={() => {
-                  const next = !isSpeakerOn;
-                  setIsSpeakerOn(next);
-                  if (remoteAudioRef.current) remoteAudioRef.current.muted = !next;
-                }}
-              >
-                {isSpeakerOn ? 'Speaker On' : 'Speaker Off'}
-              </button>
+              <label className="checkbox" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={isSpeakerOn}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setIsSpeakerOn(next);
+                    if (remoteAudioRef.current) remoteAudioRef.current.muted = !next;
+                  }}
+                />
+                <span>Speaker {isSpeakerOn ? 'On' : 'Off'}</span>
+              </label>
               <button 
                 className={`btn ${attendanceMode ? 'btn-success' : 'btn-primary'}`} 
                 onClick={toggleAttendanceMode}

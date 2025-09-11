@@ -20,6 +20,7 @@ export default function Broadcaster({ roomId, onStop }) {
   const [attendanceEnabled, setAttendanceEnabled] = useState(false);
   const [viewerDetectionStatus, setViewerDetectionStatus] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
+  const [analysisEnabled, setAnalysisEnabled] = useState(false);
   const overlayCanvasRef = useRef(null);
 
   // Video quality configurations
@@ -184,9 +185,9 @@ export default function Broadcaster({ roomId, onStop }) {
         localStreamRef.current.getTracks().forEach(t => t.stop());
       }
     };
-  }, [camera, videoQuality, isMicOn]);
+  }, [camera, videoQuality]);
 
-  // Draw attendance overlay oval on broadcaster preview (UI only)
+  // Draw attendance/analysis overlay oval on broadcaster preview (UI only)
   useEffect(() => {
     const canvas = overlayCanvasRef.current;
     const videoEl = localVideoRef.current;
@@ -198,13 +199,13 @@ export default function Broadcaster({ roomId, onStop }) {
       const aspect = h / Math.max(w, 1);
       if (aspect > 1.3) {
         // Tall/portrait screens (mobile)
-        return { rx: w * 0.24, ry: h * 0.26 };
+        return { rx: w * 0.30, ry: h * 0.27 };
       } else if (aspect < 0.9) {
         // Wide/landscape screens
-        return { rx: w * 0.22, ry: h * 0.31 };
+        return { rx: w * 0.32, ry: h * 0.30 };
       }
       // Default (laptop/tablet)
-      return { rx: w * 0.22, ry: h * 0.33 };
+      return { rx: w * 0.30, ry: h * 0.33 };
     };
 
     const draw = () => {
@@ -215,7 +216,7 @@ export default function Broadcaster({ roomId, onStop }) {
         canvas.height = h;
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (!attendanceEnabled) return;
+      if (!(attendanceEnabled || analysisEnabled)) return;
 
       const { rx: guideRx, ry: guideRy } = computeGuide(w, h);
       const guideCx = w / 2;
@@ -247,7 +248,7 @@ export default function Broadcaster({ roomId, onStop }) {
       window.removeEventListener('resize', handleResize);
       ctx && ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [attendanceEnabled, viewerDetectionStatus, isReady]);
+  }, [attendanceEnabled, analysisEnabled, viewerDetectionStatus, isReady]);
 
   // Monitor connection quality
   const monitorConnectionQuality = (pc) => {
@@ -390,26 +391,42 @@ export default function Broadcaster({ roomId, onStop }) {
           </div>
         </div>
         <div className="field">
-          <label>Microphone</label>
-          <button
-            className={`btn ${isMicOn ? 'btn-success' : 'btn-primary'}`}
-            onClick={() => {
-              const next = !isMicOn;
-              setIsMicOn(next);
-              if (localStreamRef.current) {
-                localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = next; });
-              }
-            }}
-            disabled={!isReady}
-          >
-            {isMicOn ? 'Mic On' : 'Mic Off'}
-          </button>
+          <label htmlFor="mic-toggle">Microphone</label>
+          <label className="checkbox" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              id="mic-toggle"
+              type="checkbox"
+              checked={isMicOn}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setIsMicOn(next);
+                if (localStreamRef.current) {
+                  localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = next; });
+                }
+              }}
+              disabled={!isReady}
+            />
+            <span>{isMicOn ? 'On' : 'Off'}</span>
+          </label>
         </div>
         <div className="field">
           <label>Attendance</label>
           <div className={`badge ${attendanceEnabled ? 'badge-success' : 'badge-secondary'}`}>
             {attendanceEnabled ? 'Attendance On' : 'Attendance Off'}
           </div>
+        </div>
+        <div className="field">
+          <label htmlFor="analysis-toggle">Analysis</label>
+          <label className="checkbox" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              id="analysis-toggle"
+              type="checkbox"
+              checked={analysisEnabled}
+              onChange={(e) => setAnalysisEnabled(e.target.checked)}
+              disabled={!isReady}
+            />
+            <span>{analysisEnabled ? 'On' : 'Off'}</span>
+          </label>
         </div>
       </div>
       <div className="video-shell" style={{ position: 'relative' }}>
